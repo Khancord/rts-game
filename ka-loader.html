@@ -2,26 +2,28 @@
 <html lang="en">
 
 <head>
+    <!-- Reload button -->
+    <script></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Basic Phaser Game</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.js"></script>
-
     <!-- Filesystem workaround -->
     <script type="">
-        const baseURL = "https://cdn.jsdelivr.net/gh/Khancord/ka-group-project@main/PhaserTest/dist/sandboxified/";
-        const assetCache = {};
+        var baseURL = "https://cdn.jsdelivr.net/gh/Khancord/ka-group-project@main/PhaserTest/dist/sandboxified/";
+        // var baseURL = "./PhaserTest/dist/sandboxified/";
+        var assetCache = {};
 
         // Patch XMLHttpRequest.prototype.open before Phaser initializes
-        const originalOpen = XMLHttpRequest.prototype.open;
-        const originalSend = XMLHttpRequest.prototype.send;
+        var originalOpen = XMLHttpRequest.prototype.open;
+        var originalSend = XMLHttpRequest.prototype.send;
 
         XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
             // Store the original URL for later use
             this._originalUrl = url;
 
             // Extract the filename from the path
-            const urlParts = url.split('/');
+            var urlParts = url.split('/');
             this._assetFilename = urlParts[urlParts.length - 1];
 
             // Call the original method with the same arguments
@@ -30,11 +32,11 @@
 
         XMLHttpRequest.prototype.send = function () {
             // Check if this is a request for an asset we should handle
-            const filename = this._assetFilename;
+            var filename = this._assetFilename;
 
             if (filename && !this._originalUrl.includes('jsdelivr')) {
                 // Store reference to the XHR object for callbacks
-                const xhr = this;
+                var xhr = this;
 
                 // If we already have this asset cached
                 if (assetCache[filename]) {
@@ -51,7 +53,7 @@
 
                         // Trigger the onload event
                         if (xhr.onload) {
-                            const loadEvent = new Event('load');
+                            var loadEvent = new Event('load');
                             xhr.onload(loadEvent);
                         }
                     }, 0);
@@ -60,14 +62,14 @@
                 }
 
                 // Create a script element to load the JS file with base64 data
-                const script = document.createElement('script');
+                var script = document.createElement('script');
                 script.src = baseURL + filename + '.js';
 
                 script.onload = function () {
                     if (window[filename]) {
                         try {
-                            const base64Data = window[filename];
-                            const binaryString = atob(base64Data);
+                            var base64Data = window[filename];
+                            var binaryString = atob(base64Data);
 
                             // Prepare the appropriate response based on XHR's responseType
                             let response;
@@ -77,14 +79,14 @@
                                 response = binaryString;
                                 responseText = binaryString;
                             } else if (xhr.responseType === 'blob') {
-                                const byteArray = new Uint8Array(binaryString.length);
+                                var byteArray = new Uint8Array(binaryString.length);
                                 for (let i = 0; i < binaryString.length; i++) {
                                     byteArray[i] = binaryString.charCodeAt(i);
                                 }
                                 response = new Blob([byteArray], { type: 'application/octet-stream' });
                                 responseText = '';
                             } else if (xhr.responseType === 'arraybuffer') {
-                                const byteArray = new Uint8Array(binaryString.length);
+                                var byteArray = new Uint8Array(binaryString.length);
                                 for (let i = 0; i < binaryString.length; i++) {
                                     byteArray[i] = binaryString.charCodeAt(i);
                                 }
@@ -113,7 +115,7 @@
 
                             // Trigger the onload event
                             if (xhr.onload) {
-                                const loadEvent = new Event('load');
+                                var loadEvent = new Event('load');
                                 xhr.onload(loadEvent);
                             }
                         } catch (e) {
@@ -121,7 +123,7 @@
 
                             // Trigger the onerror event
                             if (xhr.onerror) {
-                                const errorEvent = new Event('error');
+                                var errorEvent = new Event('error');
                                 xhr.onerror(errorEvent);
                             }
                         }
@@ -130,7 +132,7 @@
 
                         // Trigger the onerror event
                         if (xhr.onerror) {
-                            const errorEvent = new Event('error');
+                            var errorEvent = new Event('error');
                             xhr.onerror(errorEvent);
                         }
                     }
@@ -141,7 +143,7 @@
 
                     // Trigger the onerror event
                     if (xhr.onerror) {
-                        const errorEvent = new Event('error');
+                        var errorEvent = new Event('error');
                         xhr.onerror(errorEvent);
                     }
                 };
@@ -156,15 +158,109 @@
 
         // Then load game script from github
     </script>
-
     <!-- Patch broken Blob URLs -->
-    <script>
+    <script type="">
         // TODO
+
+        // Helper function to convert base64 to ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            base64 = base64.split(",").slice(-1)[0]; // separate out base64 from the data section at start, if there
+
+            const binary_string = atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Map of known data URLs to their corresponding filenames - TODO: move to shared file
+        const dataURLMap = {
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAABAQMAAADD8p2OAAAAA1BMVEX/AP804Oa6AAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==': '__DEFAULT.png',
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAABAQMAAADD8p2OAAAAA1BMVEX/AP804Oa6AAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==": "magenta-rectangle.png",
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAJ9JREFUeNq01ssOwyAMRFG46v//Mt1ESmgh+DFmE2GPOBARKb2NVjo+17PXLD8a1+pl5+A+wSgFygymWYHBb0FtsKhJDdZlncG2IzJ4ayoMDv20wTmSMzClEgbWYNTAkQ0Z+OJ+A/eWnAaR9+oxCF4Os0H8htsMUp+pwcgBBiMNnAwF8GqIgL2hAzaGFFgZauDPKABmowZ4GL369/0rwACp2yA/ttmvsQAAAABJRU5ErkJggg==": "line-green-square.png",
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgAQMAAABJtOi3AAAAA1BMVEX///+nxBvIAAAAAXRSTlMAQObYZgAAABVJREFUeF7NwIEAAAAAgKD9qdeocAMAoAABm3DkcAAAAABJRU5ErkJggg==": "white-square.png",
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABdJREFUeNpi/P//PwMMMDEgAdwcgAADAJZuAwXJYZOzAAAAAElFTkSuQmCC': '__WHITE.png',
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAABAQMAAADD8p2OAAAAA1BMVEX//wCKxvRF+SAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==': '__BLEND_YELLOW.png',
+        };
+
+        function patchPhaser() {
+            if (typeof Phaser === 'undefined' || !Phaser.Textures || !Phaser.Textures.TextureManager) {
+                setTimeout(patchPhaser, 50); // Retry until Phaser is loaded.
+                return;
+            }
+
+            // Patch Phaser.Textures.TextureManager.addBase64
+            const originalAddBase64 = Phaser.Textures.TextureManager.prototype.addBase64;
+            Phaser.Textures.TextureManager.prototype.addBase64 = function (key, data) {
+                if (dataURLMap[data]) {
+                    const filename = dataURLMap[data];
+                    const scriptUrl = baseURL + filename + '.js'; // Construct jsdelivr URL
+
+                    const _this = this;
+
+                    // Create a script element
+                    const script = document.createElement('script');
+                    script.src = scriptUrl;
+
+                    script.onload = () => {
+                        // Access the base64 data from the global scope
+                        const base64Data = window[filename];
+                        if (base64Data) {
+                            const arrayBuffer = base64ToArrayBuffer(base64Data);
+                            const blob = new Blob([arrayBuffer]);
+                            const blobUrl = URL.createObjectURL(blob);
+
+                            const image = new Image();
+                            image.onload = () => {
+                                const texture = _this.create(key, image);
+                                if (texture) {
+                                    Phaser.Textures.Parsers.Image(texture, 0);
+                                    _this.emit(Phaser.Textures.Events.ADD, key, texture);
+                                    _this.emit(Phaser.Textures.Events.ADD_KEY + key, texture);
+                                    _this.emit(Phaser.Textures.Events.LOAD, key, texture);
+                                }
+                            };
+                            image.onerror = () => _this.emit(Phaser.Textures.Events.ERROR, key);
+                            image.src = blobUrl;
+                        } else {
+                            console.error(`Base64 data not found for ${filename}`);
+                            _this.emit(Phaser.Textures.Events.ERROR, key);
+                        }
+                    };
+
+                    script.onerror = () => {
+                        console.error(`Error loading script: ${scriptUrl}`);
+                        _this.emit(Phaser.Textures.Events.ERROR, key);
+                    };
+
+                    // Append the script to the document head to start loading
+                    document.head.appendChild(script);
+                    return this;
+
+                } else {
+                    // If it's not a known data URL, call the original function
+                    return originalAddBase64.call(this, key, data);
+                }
+            };
+
+            // Patch Phaser.Device.Canvas.checkBlendMode
+            Phaser.Device.Canvas.checkBlendMode = function () {
+                // Ensure CanvasFeatures is initialized
+                Phaser.Device.features.canvas = Phaser.Device.features.canvas || {}; // Ensure it exists.
+                Phaser.Device.features.canvas.supportInverseAlpha = true;
+                Phaser.Device.features.canvas.supportNewBlendModes = true;
+
+                return true;
+            };
+        }
+        patchPhaser(); // Initiate the patching
+
     </script>
     
     <!-- Pull game -->
     <script src="https://cdn.jsdelivr.net/gh/Khancord/ka-group-project@main/PhaserTest/game.js" defer></script>
-
     <style>
         body {
             margin: 0;
