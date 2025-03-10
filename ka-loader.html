@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.js"></script>
 
     <!-- Filesystem workaround -->
-    <script>
+    <script type="">
         const baseURL = "https://cdn.jsdelivr.net/gh/Khancord/ka-group-project@main/PhaserTest/dist/sandboxified/";
         const assetCache = {};
 
@@ -156,8 +156,15 @@
 
         // Then load game script from github
     </script>
+
+    <!-- Patch broken Blob URLs -->
+    <script>
+        // TODO
+    </script>
     
-    <script src="./PhaserTest/game.js" defer></script>
+    <!-- Pull game -->
+    <script src="https://cdn.jsdelivr.net/gh/Khancord/ka-group-project@main/PhaserTest/game.js" defer></script>
+
     <style>
         body {
             margin: 0;
