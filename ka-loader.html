@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Phaser Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.js"></script>
+
+    <!-- Filesystem workaround -->
+    <script>
+        const baseURL = "https://cdn.jsdelivr.net/gh/Khancord/ka-group-project@main/PhaserTest/dist/sandboxified/";
+        const assetCache = {};
+
+        // Patch XMLHttpRequest.prototype.open before Phaser initializes
+        const originalOpen = XMLHttpRequest.prototype.open;
+        const originalSend = XMLHttpRequest.prototype.send;
+
+        XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+            // Store the original URL for later use
+            this._originalUrl = url;
+
+            // Extract the filename from the path
+            const urlParts = url.split('/');
+            this._assetFilename = urlParts[urlParts.length - 1];
+
+            // Call the original method with the same arguments
+            return originalOpen.apply(this, arguments);
+        };
+
+        XMLHttpRequest.prototype.send = function () {
+            // Check if this is a request for an asset we should handle
+            const filename = this._assetFilename;
+
+            if (filename && !this._originalUrl.includes('jsdelivr')) {
+                // Store reference to the XHR object for callbacks
+                const xhr = this;
+
+                // If we already have this asset cached
+                if (assetCache[filename]) {
+                    setTimeout(() => {
+                        // Set required XHR properties
+                        Object.defineProperty(xhr, 'status', { value: 200 });
+                        Object.defineProperty(xhr, 'statusText', { value: 'OK' });
+
+                        if (xhr.responseType === 'blob' || xhr.responseType === 'arraybuffer') {
+                            Object.defineProperty(xhr, 'response', { value: assetCache[filename].response });
+                        } else {
+                            Object.defineProperty(xhr, 'responseText', { value: assetCache[filename].responseText });
+                        }
+
+                        // Trigger the onload event
+                        if (xhr.onload) {
+                            const loadEvent = new Event('load');
+                            xhr.onload(loadEvent);
+                        }
+                    }, 0);
+
+                    return;
+                }
+
+                // Create a script element to load the JS file with base64 data
+                const script = document.createElement('script');
+                script.src = baseURL + filename + '.js';
+
+                script.onload = function () {
+                    if (window[filename]) {
+                        try {
+                            const base64Data = window[filename];
+                            const binaryString = atob(base64Data);
+
+                            // Prepare the appropriate response based on XHR's responseType
+                            let response;
+                            let responseText = '';
+
+                            if (xhr.responseType === 'text' || xhr.responseType === '') {
+                                response = binaryString;
+                                responseText = binaryString;
+                            } else if (xhr.responseType === 'blob') {
+                                const byteArray = new Uint8Array(binaryString.length);
+                                for (let i = 0; i < binaryString.length; i++) {
+                                    byteArray[i] = binaryString.charCodeAt(i);
+                                }
+                                response = new Blob([byteArray], { type: 'application/octet-stream' });
+                                responseText = '';
+                            } else if (xhr.responseType === 'arraybuffer') {
+                                const byteArray = new Uint8Array(binaryString.length);
+                                for (let i = 0; i < binaryString.length; i++) {
+                                    byteArray[i] = binaryString.charCodeAt(i);
+                                }
+                                response = byteArray.buffer;
+                                responseText = '';
+                            } else {
+                                response = binaryString;
+                                responseText = binaryString;
+                            }
+
+                            // Store in cache for future use
+                            assetCache[filename] = {
+                                response: response,
+                                responseText: responseText
+                            };
+
+                            // Set XHR properties
+                            Object.defineProperty(xhr, 'status', { value: 200 });
+                            Object.defineProperty(xhr, 'statusText', { value: 'OK' });
+
+                            if (xhr.responseType === 'blob' || xhr.responseType === 'arraybuffer') {
+                                Object.defineProperty(xhr, 'response', { value: response });
+                            } else {
+                                Object.defineProperty(xhr, 'responseText', { value: responseText });
+                            }
+
+                            // Trigger the onload event
+                            if (xhr.onload) {
+                                const loadEvent = new Event('load');
+                                xhr.onload(loadEvent);
+                            }
+                        } catch (e) {
+                            console.error("Error processing asset:", e);
+
+                            // Trigger the onerror event
+                            if (xhr.onerror) {
+                                const errorEvent = new Event('error');
+                                xhr.onerror(errorEvent);
+                            }
+                        }
+                    } else {
+                        console.error(`Asset data not found in window["${filename}"]`);
+
+                        // Trigger the onerror event
+                        if (xhr.onerror) {
+                            const errorEvent = new Event('error');
+                            xhr.onerror(errorEvent);
+                        }
+                    }
+                };
+
+                script.onerror = function () {
+                    console.error(`Failed to load script: ${script.src}`);
+
+                    // Trigger the onerror event
+                    if (xhr.onerror) {
+                        const errorEvent = new Event('error');
+                        xhr.onerror(errorEvent);
+                    }
+                };
+
+                // Add the script to the document to start loading
+                document.head.appendChild(script);
+            } else {
+                // For non-asset URLs, proceed with the original send
+                return originalSend.apply(this, arguments);
+            }
+        };
+
+        // Then load game script from github
+    </script>
+    
+    <script src="./PhaserTest/game.js" defer></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #242424;
+        }
+
+        #game-container {
+            width: 800px;
+            height: 600px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-container"></div>
+</body>
+
+</html>
