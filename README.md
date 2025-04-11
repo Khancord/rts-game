@@ -1,3 +1,7 @@
-# 2.5D RTS Game
+# Untitled RTS Game
 
-A real-time strategy game in a "2.5 dimentional" world (concept should be defined later in the README). 
+A real-time strategy game in development.
+
+## Development
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for instructions on how to set up the development environment.
